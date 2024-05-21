@@ -279,6 +279,8 @@ require('lazy').setup({
               ['i'] = {
                 ['<C-c>'] = fb_actions.create,
                 ['<C-d>'] = fb_actions.remove,
+                ['<C-y>'] = fb_actions.copy,
+                ['<C-r>'] = fb_actions.rename,
               },
             },
           },
@@ -303,7 +305,9 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
       vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
       vim.keymap.set('n', '<leader>fb', function()
-        require('telescope').extensions.file_browser.file_browser()
+        require('telescope').extensions.file_browser.file_browser {
+          cwd = vim.fn.expand '%:p:h',
+        }
       end, {
         desc = '[F]ile [B]rowser',
       })
@@ -547,6 +551,7 @@ require('lazy').setup({
         -- is found.
         javascript = { { 'prettierd', 'prettier' } },
         typescript = { { 'prettierd', 'prettier' } },
+        typescriptreact = { { 'prettierd', 'prettier' } },
       },
     },
   },
@@ -662,7 +667,59 @@ require('lazy').setup({
       vim.cmd.hi 'Comment gui=none'
     end,
   },
+  -- Harpoon
+  {
+    'ThePrimeagen/harpoon',
+    branch = 'harpoon2',
+    dependencies = { 'nvim-telescope/telescope.nvim', 'nvim-lua/plenary.nvim' },
+    config = function()
+      local harpoon = require 'harpoon'
 
+      harpoon:setup {}
+
+      -- basic telescope configuration
+      local conf = require('telescope.config').values
+      local function toggle_telescope(harpoon_files)
+        local file_paths = {}
+        for _, item in ipairs(harpoon_files.items) do
+          table.insert(file_paths, item.value)
+        end
+
+        require('telescope.pickers')
+          .new({}, {
+            prompt_title = 'Harpoon',
+            finder = require('telescope.finders').new_table {
+              results = file_paths,
+            },
+            previewer = conf.file_previewer {},
+            sorter = conf.generic_sorter {},
+          })
+          :find()
+      end
+      vim.keymap.set('n', '<leader>ac', function()
+        harpoon:list():add()
+      end, { desc = '[A]dd [c]urrent file to harpoon' })
+
+      -- Toggle previous & next buffers stored within Harpoon list
+      vim.keymap.set('n', '<C-S-P>', function()
+        harpoon:list():prev()
+      end, { desc = '[P]revious harpoon buffer' })
+      vim.keymap.set('n', '<C-S-N>', function()
+        harpoon:list():next()
+      end, { desc = '[N]ext harpoon buffer' })
+      vim.keymap.set('n', '<C-e>', function()
+        toggle_telescope(harpoon:list())
+      end, { desc = 'Open harpoon window' })
+    end,
+  },
+  -- GitLinker
+  {
+    'ruifm/gitlinker.nvim',
+    requires = { 'nvim-lua/plenary.nvim' },
+    config = function()
+      require('gitlinker').setup()
+    end,
+  },
   -- Copilot
   { 'github/copilot.vim' },
   -- Highlight todo, notes, etc in comments
